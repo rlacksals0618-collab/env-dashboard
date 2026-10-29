@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>학습공간 환경 모니터</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip" href="#control">조명 제어로 건너뛰기</a>
+
+<header class="top">
+  <div class="top-inner">
+    <div class="title">
+      <h1>학습공간 환경 모니터</h1>
+      <p class="sub">UNO P01 회로 · 조도·온습도·조명</p>
+    </div>
+    <div class="link-area">
+      <p id="simBadge" class="sim" hidden>시뮬레이션 데이터 · 실제 측정 아님</p>
+      <div id="linkPill" class="pill" data-tone="muted" role="status" aria-live="polite">
+        <span class="pill-icon" aria-hidden="true"></span>
+        <span id="linkText">브리지 연결 중</span>
+      </div>
+      <p id="ageText" class="age">아직 받은 값 없음</p>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+  <section aria-labelledby="h-now" class="block">
+    <h2 id="h-now">지금 상태</h2>
+    <div class="cards">
+      <article class="card card-light" aria-labelledby="c-light">
+        <h3 id="c-light">밝기</h3>
+        <p class="band"><span id="bandIcon" class="band-icon" aria-hidden="true"></span><span id="bandText">—</span></p>
+        <p class="raw">센서 원시값 <b id="lightRaw" class="num">—</b><span class="unit"> / 1023</span></p>
+        <svg id="lightMeter" class="meter" viewBox="0 0 300 46" role="img" aria-labelledby="meterDesc">
+          <title id="meterDesc">조도 원시값과 켜기·끄기 기준 위치</title>
+        </svg>
+        <p class="tag" id="lightTag"></p>
+      </article>
+
+      <article class="card" aria-labelledby="c-temp">
+        <h3 id="c-temp">온도</h3>
+        <p class="big"><b id="tempVal" class="num">—</b><span class="unit">°C</span></p>
+        <p class="tag" id="tempTag"></p>
+      </article>
+
+      <article class="card" aria-labelledby="c-hum">
+        <h3 id="c-hum">습도</h3>
+        <p class="big"><b id="humVal" class="num">—</b><span class="unit">%</span></p>
+        <p class="tag" id="humTag"></p>
+      </article>
+
+      <article class="card" aria-labelledby="c-led">
+        <h3 id="c-led">조명 (빨강 LED)</h3>
+        <p class="big"><span id="ledIcon" class="led-dot" aria-hidden="true"></span><b id="ledVal">—</b></p>
+        <p class="tag" id="ledMode">—</p>
+        <p class="hint">보드 프로그램이 보고한 상태입니다. 실제 점등은 눈으로 확인합니다.</p>
+      </article>
+
+      <article class="card card-small" aria-labelledby="c-in">
+        <h3 id="c-in">손으로 조작하는 입력</h3>
+        <dl class="kv">
+          <div><dt>택트 스위치</dt><dd id="btnVal">—</dd></div>
+          <div><dt>가변저항</dt><dd><span id="potVal" class="num">—</span> / 1023</dd></div>
+          <div><dt>LCD</dt><dd id="lcdVal">—</dd></div>
+        </dl>
+      </article>
+    </div>
+    <div id="alertBox" class="alerts" hidden>
+      <h3 class="alerts-title">환경 경고</h3>
+      <ul id="alertList"></ul>
+    </div>
+  </section>
+
+  <section id="control" aria-labelledby="h-ctl" class="block" tabindex="-1">
+    <h2 id="h-ctl">조명 제어</h2>
+    <div class="ctl-grid">
+      <div class="panel">
+        <h3>수동 / 자동</h3>
+        <div class="btn-row">
+          <button type="button" class="btn" id="ledOn" data-cmd="LED" data-arg="1">켜기</button>
+          <button type="button" class="btn" id="ledOff" data-cmd="LED" data-arg="0">끄기</button>
+        </div>
+        <p class="hint" id="manualHint">켜기·끄기를 누르면 자동 모드가 꺼집니다.</p>
+        <div class="switch-row">
+          <button type="button" class="switch" id="autoSwitch" role="switch" aria-checked="false" aria-describedby="autoHint">
+            <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+            <span>자동 모드</span>
+          </button>
+        </div>
+        <p class="hint" id="autoHint">어두우면 켜고 밝으면 끕니다. 두 기준 사이에서는 직전 상태를 유지합니다.</p>
+        <button type="button" class="btn btn-stop" id="stopBtn" data-cmd="STOP">모두 정지 (자동 해제 + 끄기)</button>
+      </div>
+
+      <form class="panel" id="threshForm" novalidate>
+        <h3>밝기 기준 (0–1023)</h3>
+        <div class="field">
+          <label for="onTh">켜는 기준 <span class="lbl-note">이 값보다 어두우면 켬</span></label>
+          <input id="onTh" name="onTh" type="number" inputmode="numeric" min="0" max="1023" step="1" required aria-describedby="onThErr thSource">
+          <p class="err" id="onThErr"></p>
+        </div>
+        <div class="field">
+          <label for="offTh">끄는 기준 <span class="lbl-note">이 값보다 밝으면 끔</span></label>
+          <input id="offTh" name="offTh" type="number" inputmode="numeric" min="0" max="1023" step="1" required aria-describedby="offThErr thSource">
+          <p class="err" id="offThErr"></p>
+        </div>
+        <p class="hint" id="thSource">—</p>
+        <button type="submit" class="btn" id="threshBtn">기준 적용</button>
+      </form>
+
+      <div class="panel panel-log">
+        <h3>명령 결과</h3>
+        <p id="cmdStatus" class="cmd-status" role="status" aria-live="polite">아직 보낸 명령이 없습니다.</p>
+        <ol id="cmdLog" class="cmd-log" aria-label="최근 명령 기록"></ol>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-trend" class="block">
+    <div class="trend-head">
+      <h2 id="h-trend">최근 5분 추이</h2>
+      <div class="seg" role="group" aria-label="표시할 값">
+        <button type="button" class="seg-btn" data-series="light" aria-pressed="true">밝기</button>
+        <button type="button" class="seg-btn" data-series="temp" aria-pressed="false">온도</button>
+        <button type="button" class="seg-btn" data-series="hum" aria-pressed="false">습도</button>
+      </div>
+      <button type="button" class="btn btn-ghost" id="pauseBtn" aria-pressed="false">그래프 일시정지</button>
+    </div>
+    <div class="chart-wrap">
+      <svg id="chart" viewBox="0 0 640 240" role="img" aria-labelledby="chartTitle chartDesc">
+        <title id="chartTitle">최근 5분 밝기</title>
+        <desc id="chartDesc">값이 모이는 중입니다.</desc>
+      </svg>
+    </div>
+    <details class="table-details">
+      <summary>30초 간격 값을 표로 보기</summary>
+      <div class="table-wrap">
+        <table>
+          <caption class="sr-only">최근 5분, 30초 간격 측정값</caption>
+          <thead><tr><th scope="col">시각</th><th scope="col">밝기 원시값</th><th scope="col">온도 °C</th><th scope="col">습도 %</th><th scope="col">LED</th></tr></thead>
+          <tbody id="trendRows"></tbody>
+        </table>
+      </div>
+    </details>
+  </section>
+
+  <section aria-labelledby="h-alert" class="block">
+    <h2 id="h-alert">경고 기준</h2>
+    <form class="panel alert-form" id="alertForm" novalidate>
+      <p class="hint">DHT11 측정 범위는 온도 0–50 °C, 습도 20–90 %입니다. 이 기준은 이 브라우저에만 저장됩니다.</p>
+      <div class="alert-fields">
+        <div class="field">
+          <label for="tempMax">온도 상한 (°C)</label>
+          <input id="tempMax" type="number" min="0" max="50" step="0.5" inputmode="decimal" aria-describedby="tempMaxErr">
+          <p class="err" id="tempMaxErr"></p>
+        </div>
+        <div class="field">
+          <label for="humMin">습도 하한 (%)</label>
+          <input id="humMin" type="number" min="20" max="90" step="1" inputmode="numeric" aria-describedby="humMinErr">
+          <p class="err" id="humMinErr"></p>
+        </div>
+        <div class="field">
+          <label for="humMax">습도 상한 (%)</label>
+          <input id="humMax" type="number" min="20" max="90" step="1" inputmode="numeric" aria-describedby="humMaxErr">
+          <p class="err" id="humMaxErr"></p>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button type="submit" class="btn">경고 기준 저장</button>
+        <p id="alertSaved" class="hint" role="status" aria-live="polite"></p>
+      </div>
+    </form>
+  </section>
+</main>
+
+<footer class="foot">
+  <p>연결 정보: <span id="portInfo">—</span> · 시리얼 115200 · 회로 P01. 브리지 프로그램 하나만 COM 포트를 엽니다.</p>
+</footer>
+
+<div id="announcer" class="sr-only" aria-live="polite"></div>
+<script src="app.js"></script>
+</body>
+</html>
